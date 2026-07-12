@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Mimi Dreams</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#1b1230;
+    --bg-panel:#2a1b45;
+    --pink:#ff6fa0;
+    --pink-soft:#ffb3c9;
+    --gold:#ffd166;
+    --cream:#fff3e6;
+    --green:#7bd88f;
+    --shadow:#0d0819;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:var(--bg-deep);
+    font-family:'VT323', monospace;
+    color:var(--cream);
+    overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+  body{
+    background:
+      radial-gradient(circle at 20% 15%, rgba(255,111,160,0.10), transparent 40%),
+      radial-gradient(circle at 80% 85%, rgba(123,216,143,0.08), transparent 40%),
+      var(--bg-deep);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .pixel-font{ font-family:'Press Start 2P', monospace; }
+
+  #app{
+    position:relative;
+    width:min(96vw, 700px);
+    aspect-ratio: 700/560;
+    background:var(--bg-panel);
+    border:4px solid var(--shadow);
+    box-shadow: 0 0 0 4px var(--pink), 8px 8px 0 var(--shadow);
+    image-rendering:pixelated;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .screen{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px; text-align:center;
+    transition:opacity .4s ease;
+  }
+  .hidden{ display:none !important; }
+
+  /* ---------- Shared pixel bits ---------- */
+  .pixel-heart{
+    width:14px;height:14px;
+    background:var(--pink);
+    display:inline-block;
+    position:relative;
+    margin:0 2px;
+    clip-path: polygon(50% 15%, 61% 0%, 80% 0%, 100% 20%, 100% 40%, 50% 100%, 0% 40%, 0% 20%, 20% 0%, 39% 0%);
+  }
+  .pixel-heart.empty{ background:transparent; border:2px solid var(--pink-soft); clip-path:none; border-radius:2px; }
+
+  button{
+    font-family:'Press Start 2P', monospace;
+    background:var(--pink);
+    color:var(--shadow);
+    border:none;
+    padding:12px 18px;
+    font-size:11px;
+    cursor:pointer;
+    box-shadow: 4px 4px 0 var(--shadow);
+    transition: transform .08s ease;
+  }
+  button:hover{ background:var(--gold); }
+  button:active{ transform: translate(3px,3px); box-shadow:1px 1px 0 var(--shadow); }
+
+  input[type=text]{
+    font-family:'VT323', monospace;
+    font-size:22px;
+    padding:8px 12px;
+    border:3px solid var(--shadow);
+    background:var(--cream);
+    color:var(--shadow);
+    outline:none;
+    text-align:center;
+    width:220px;
+  }
+
+  /* ---------- Lock screen ---------- */
+  #lockScreen h1{ font-size:16px; color:var(--gold); margin-bottom:18px; line-height:1.6;}
+  #lockScreen p{ font-size:20px; color:var(--pink-soft); margin:6px 0 18px; }
+  #lockScreen .hint{ font-size:15px; color:#a998c9; margin-top:14px;}
+  #lockScreen .row{ display:flex; gap:10px; align-items:center; }
+  #lockShake{ animation:none; }
+  .shake{ animation:shakeAnim .35s; }
+  @keyframes shakeAnim{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-8px); }
+    40%{ transform:translateX(8px); }
+    60%{ transform:translateX(-5px); }
+    80%{ transform:translateX(5px); }
+  }
+  #lockMsg{ min-height:20px; font-size:16px; color:var(--pink); }
+
+  /* ---------- Title screen ---------- */
+  #titleScreen h1{
+    font-size:26px; color:var(--gold);
+    text-shadow:4px 4px 0 var(--shadow);
+    line-height:1.7; margin-bottom:6px;
+  }
+  #titleScreen .sub{ font-size:20px; color:var(--pink-soft); margin-bottom:34px; }
+  #titleScreen .credit{ font-size:15px; color:#a998c9; margin-top:30px; }
+  .float-heart{
+    position:absolute; bottom:-20px; font-size:18px; opacity:.8;
+    animation: floatUp linear forwards;
+  }
+  @keyframes floatUp{
+    to{ transform:translateY(-620px) translateX(var(--dx,0px)) rotate(20deg); opacity:0; }
+  }
+
+  /* ---------- Game screen ---------- */
+  #gameScreen{ padding:0; justify-content:flex-start; }
+  #hud{
+    width:100%; padding:8px 14px;
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--shadow);
+    font-size:15px;
+    z-index:5;
+  }
+  #hud .levelName{ color:var(--gold); font-size:14px; }
+  #canvasWrap{ position:relative; width:100%; flex:1; }
+  canvas{ display:block; width:100%; height:100%; image-rendering:pixelated; }
+
+  #interactPrompt{
+    position:absolute; transform:translate(-50%,-100%);
+    background:var(--cream); color:var(--shadow);
+    font-family:'Press Start 2P', monospace; font-size:9px;
+    padding:5px 8px; border:2px solid var(--shadow);
+    box-shadow:3px 3px 0 var(--shadow);
+    pointer-events:none;
+    white-space:nowrap;
+  }
+
+  #dialogueBox{
+    position:absolute; left:12px; right:12px; bottom:12px;
+    background:var(--cream); color:var(--shadow);
+    border:3px solid var(--shadow);
+    box-shadow:5px 5px 0 var(--shadow);
+    padding:14px 16px;
+    font-size:20px;
+    line-height:1.3;
+  }
+  #dialogueBox .who{ font-family:'Press Start 2P', monospace; font-size:10px; color:var(--pink); margin-bottom:8px; display:block;}
+  #dialogueBox .footer{ display:flex; justify-content:flex-end; margin-top:8px; }
+  #dialogueNext{ font-size:10px; padding:8px 12px; }
+
+  #continueLevelBtn{
+    position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
+  }
+
+  #mobileControls{
+    position:absolute; bottom:110px; left:12px; right:12px;
+    display:flex; justify-content:space-between; pointer-events:none;
+  }
+  #mobileControls .pad{ pointer-events:auto; display:grid; grid-template-columns:repeat(3,34px); grid-template-rows:repeat(3,34px); gap:2px; opacity:.85;}
+  #mobileControls button.dpad{ box-shadow:2px 2px 0 var(--shadow); font-size:12px; padding:0;}
+  #interactBtnMobile{ pointer-events:auto; align-self:flex-end; font-size:10px; }
+
+  /* ---------- Ending screen ---------- */
+  #endingScreen h1{ font-size:20px; color:var(--gold); line-height:1.8; margin-bottom:10px; text-shadow:3px 3px 0 var(--shadow);}
+  #endingScreen p{ font-size:22px; color:var(--pink-soft); max-width:420px; }
+  #endingHearts{ position:absolute; inset:0; pointer-events:none; overflow:hidden;}
+
+  @media (min-width: 720px){
+    #mobileControls{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- LOCK SCREEN -->
+  <div id="lockScreen" class="screen">
+    <h1 class="pixel-font">✦ THE MIMI DREAMS ✦</h1>
+    <p>A tiny world, built for two.</p>
+    <div class="row">
+      <input type="text" id="lockInput" maxlength="20" placeholder="your name..." autocomplete="off">
+      <button id="lockBtn" class="pixel-font">ENTER</button>
+    </div>
+    <div id="lockMsg"></div>
+    <div class="hint">psst... it's the name of the girl this whole world was built for</div>
+  </div>
+
+  <!-- TITLE SCREEN -->
+  <div id="titleScreen" class="screen hidden" style="position:relative; overflow:hidden;">
+    <h1 class="pixel-font">THE MIMI<br>DREAMS</h1>
+    <div class="sub">a tiny world made of our memories</div>
+    <button id="startBtn" class="pixel-font">▸ START</button>
+    <div class="credit">for Mimi, from Kittu ❤️</div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="gameScreen" class="screen hidden">
+    <div id="hud">
+      <div class="levelName pixel-font" id="levelNameLabel">Level</div>
+      <div id="heartsHud"></div>
+    </div>
+    <div id="canvasWrap">
+      <canvas id="canvas" width="700" height="440"></canvas>
+      <div id="interactPrompt" class="hidden"></div>
+      <div id="dialogueBox" class="hidden">
+        <span class="who" id="dialogueWho">MEMORY</span>
+        <div id="dialogueText"></div>
+        <div class="footer"><button id="dialogueNext" class="pixel-font">Continue ▸</button></div>
+      </div>
+      <button id="continueLevelBtn" class="pixel-font hidden">Continue ▸</button>
+      <div id="mobileControls">
+        <div class="pad" style="grid-template-areas:'. u .' 'l . r' '. d .';">
+          <div></div><button class="dpad" data-dir="up" style="grid-area:u;">▲</button><div></div>
+          <button class="dpad" data-dir="left" style="grid-area:l;">◀</button><div></div><button class="dpad" data-dir="right" style="grid-area:r;">▶</button>
+          <div></div><button class="dpad" data-dir="down" style="grid-area:d;">▼</button><div></div>
+        </div>
+        <button id="interactBtnMobile" class="pixel-font">✦ TALK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENDING SCREEN -->
+  <div id="endingScreen" class="screen hidden">
+    <div id="endingHearts"></div>
+    <h1 class="pixel-font">✦ ✦ ✦</h1>
+    <p>"I always want to be in Mimi dreams."</p>
+    <div class="credit" style="margin-top:20px;">- built with love, for Mimi -</div>
+    <button id="replayBtn" class="pixel-font" style="margin-top:26px;">↺ Replay</button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     UTIL
+  ============================================================ */
+  const $ = id => document.getElementById(id);
+  function spawnFloatHeart(container){
+    const h = document.createElement('div');
+    h.className = 'float-heart';
+    h.textContent = ['❤','✦','♡'][Math.floor(Math.random()*3)];
+    h.style.left = (Math.random()*90+5) + '%';
+    h.style.setProperty('--dx', (Math.random()*60-30)+'px');
+    h.style.animationDuration = (4+Math.random()*3)+'s';
+    container.appendChild(h);
+    setTimeout(()=>h.remove(), 7500);
+  }
+
+  /* ============================================================
+     LOCK SCREEN
+  ============================================================ */
+  const lockInput = $('lockInput');
+  const lockBtn = $('lockBtn');
+  const lockMsg = $('lockMsg');
+  const lockScreen = $('lockScreen');
+  const titleScreen = $('titleScreen');
+
+  function tryUnlock(){
+    const v = lockInput.value.trim().toLowerCase();
+    if(v === 'mimi'){
+      lockMsg.textContent = 'welcome home ❤️';
+      lockMsg.style.color = 'var(--green)';
+      setTimeout(()=>{
+        lockScreen.classList.add('hidden');
+        titleScreen.classList.remove('hidden');
+        titleHeartLoop();
+      }, 650);
+    } else {
+      lockMsg.textContent = "hmm, that's not quite right... try again";
+      lockScreen.classList.remove('shake');
+      void lockScreen.offsetWidth;
+      lockScreen.classList.add('shake');
+    }
+  }
+  lockBtn.addEventListener('click', tryUnlock);
+  lockInput.addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
+
+  let titleHeartTimer = null;
+  function titleHeartLoop(){
+    spawnFloatHeart(titleScreen);
+    titleHeartTimer = setTimeout(titleHeartLoop, 900);
+  }
+
+  /* ============================================================
+     TITLE -> GAME
+  ============================================================ */
+  const gameScreen = $('gameScreen');
+  $('startBtn').addEventListener('click', ()=>{
+    clearTimeout(titleHeartTimer);
+    titleScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    startGame();
+  });
+
+  /* ============================================================
+     GAME DATA
+  ============================================================ */
+  const LEVELS = [
+    {
+      id:'level1',
+      name:'Memory I — The Ramen Cafe',
+      floorA:'#8a5a35', floorB:'#7a4d2c',
+      ambience:'steam',
+      props:[
+        {type:'counter', x:120, y:150},
+        {type:'table', x:420, y:260},
+        {type:'window', x:600, y:120}
+      ],
+      hotspots:[
+        {id:'counter', x:120, y:150, icon:'🍜', label:'Order Counter',
+          lines:[
+            "The Order Counter",
+            "I still remember standing here, deciding what to order... secretly hoping you'd like my choice.",
+            "Near Moolchand Metro Station, a tiny ramen cafe became the start of everything."
+          ]},
+        {id:'table', x:420, y:260, icon:'🍥', label:'Our Table',
+          lines:[
+            "Our Table",
+            "We sat right here. Four hours of ramen, laughing, and me falling for you a little more with every bowl.",
+            "I don't think either of us noticed the time passing."
+          ]},
+        {id:'window', x:600, y:120, icon:'🪟', label:'The Window Seat',
+          lines:[
+            "The Window Seat",
+            "I kept glancing outside, nervous, waiting for you to arrive.",
+            "Then you walked in, and every nerve turned into a smile."
+          ]}
+      ]
+    },
+    {
+      id:'level2',
+      name:'Memory II — The Duck Plan (Sort Of)',
+      floorA:'#5c8a4a', floorB:'#517c40',
+      ambience:'none',
+      props:[
+        {type:'mud', x:180, y:180},
+        {type:'shop', x:520, y:150},
+        {type:'bench', x:360, y:300},
+        {type:'secret', x:640, y:340}
+      ],
+      hotspots:[
+        {id:'mud', x:180, y:180, icon:'🟤', label:"The 'Duck Pond'",
+          lines:[
+            "The Grand Duck Reveal",
+            "I promised you ducks... and delivered a beautiful, glistening patch of mud.",
+            "10 out of 10 date planning. Truly world class."
+          ]},
+        {id:'shop', x:520, y:150, icon:'🔒', label:'Closed Shop',
+          lines:[
+            "The Closed Shop",
+            "The place I wanted to show you next? Locked up tight.",
+            "My master plan was falling apart in real time, and I had no backup plan B, C, or D."
+          ]},
+        {id:'bench', x:360, y:300, icon:'💞', label:'Us, Laughing Anyway',
+          lines:[
+            "Us, Laughing Anyway",
+            "Nothing went as planned. Not one single thing.",
+            "But somehow, laughing at my failed plan together became the best part of the whole day."
+          ]},
+        {id:'secret', x:640, y:340, icon:'🎀', label:'???', secret:true,
+          lines:[
+            "you found a secret",
+            "\"Here is your 10 rupees to show pom pom.\" 😄",
+            "(an inside joke. don't ask. we know.)"
+          ]}
+      ]
+    },
+    {
+      id:'level3',
+      name:'Memory III — Dancing in the Rain',
+      floorA:'#4a8a5c', floorB:'#3f7c50',
+      ambience:'rain',
+      props:[
+        {type:'deer', x:130, y:150},
+        {type:'deer', x:600, y:180},
+        {type:'dance', x:360, y:220},
+        {type:'stall', x:560, y:330}
+      ],
+      hotspots:[
+        {id:'path', x:130, y:150, icon:'🦌', label:'Deer Park Path',
+          lines:[
+            "Hauz Khas Deer Park",
+            "We were just walking, deer grazing nearby, minding our own business...",
+            "...when the sky suddenly opened up on us."
+          ]},
+        {id:'dance', x:360, y:220, icon:'☔', label:'The Dance Spot',
+          lines:[
+            "Dancing in the Rain",
+            "Instead of running for cover, we danced. Right there, completely soaked.",
+            "Like the rain was just playing our song."
+          ]},
+        {id:'stall', x:560, y:330, icon:'🥟', label:'Golgappe Stall',
+          lines:[
+            "The Golgappe Stall",
+            "After, we found a golgappe stall and ate way too many.",
+            "Best post-rain-dance meal of my entire life."
+          ]}
+      ]
+    }
+  ];
+
+  const state = {
+    levelIndex: 0,
+    player: { x:350, y:380, dir:'down', moving:false },
+    keys: {},
+    completed: {},
+    frame: 0,
+    frameTimer: 0,
+    particles: [],
+    dialogueOpen: false,
+    dialogueQueueHotspot: null,
+    dialogueLines: [],
+    dialogueIdx: 0,
+    activeHotspotInRange: null
+  };
+
+  /* ============================================================
+     CANVAS SETUP
+  ============================================================ */
+  const canvas = $('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const W = canvas.width, H = canvas.height;
+
+  /* ============================================================
+     DRAWING HELPERS
+  ============================================================ */
+  function drawFloor(colorA, colorB){
+    const tile = 40;
+    for(let y=0; y<H; y+=tile){
+      for(let x=0; x<W; x+=tile){
+        ctx.fillStyle = (((x/tile)+(y/tile))%2===0) ? colorA : colorB;
+        ctx.fillRect(x,y,tile,tile);
+      }
+    }
+  }
+
+  function drawProp(p){
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    switch(p.type){
+      case 'counter':
+        ctx.fillStyle = '#4a2f1a'; ctx.fillRect(-45,-10,90,40);
+        ctx.fillStyle = '#6b4426'; ctx.fillRect(-45,-10,90,10);
+        ctx.font='26px serif'; ctx.textAlign='center'; ctx.fillText('🍜',0,-16);
+        break;
+      case 'table':
+        ctx.fillStyle = '#5a3a20'; ctx.beginPath(); ctx.ellipse(0,10,42,16,0,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#7a5230'; ctx.beginPath(); ctx.ellipse(0,2,42,14,0,0,Math.PI*2); ctx.fill();
+        break;
+      case 'window':
+        ctx.fillStyle = '#2c1c10'; ctx.fillRect(-30,-50,60,70);
+        ctx.fillStyle = '#bfe3ff'; ctx.fillRect(-24,-44,48,58);
+        ctx.strokeStyle = '#2c1c10'; ctx.lineWidth=4;
+        ctx.beginPath(); ctx.moveTo(0,-44); ctx.lineTo(0,14); ctx.moveTo(-24,-15); ctx.lineTo(24,-15); ctx.stroke();
+        break;
+      case 'mud':
+        ctx.fillStyle = '#6b4a2a';
+        ctx.beginPath(); ctx.ellipse(0,0,50,22,0,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#5a3d22';
+        ctx.beginPath(); ctx.ellipse(10,4,28,12,0,0,Math.PI*2); ctx.fill();
+        break;
+      case 'shop':
+        ctx.fillStyle = '#666'; ctx.fillRect(-55,-60,110,80);
+        ctx.fillStyle = '#444';
+        for(let i=-50;i<50;i+=12) ctx.fillRect(i,-55,8,70);
+        ctx.fillStyle = '#d9534f'; ctx.fillRect(-55,-70,110,14);
+        break;
+      case 'bench':
+        ctx.fillStyle = '#6b4426'; ctx.fillRect(-38,-4,76,10);
+        ctx.fillStyle = '#4a2f1a'; ctx.fillRect(-32,6,8,18); ctx.fillRect(24,6,8,18);
+        break;
+      case 'secret':
+        ctx.font='22px serif'; ctx.textAlign='center'; ctx.globalAlpha=0.85;
+        ctx.fillText('🌸', 0, 0);
+        ctx.globalAlpha=1;
+        break;
+      case 'deer':
+        ctx.font='30px serif'; ctx.textAlign='center'; ctx.fillText('🦌',0,0);
+        break;
+      case 'dance':
+        ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.arc(0,0,34,0,Math.PI*2); ctx.stroke();
+        break;
+      case 'stall':
+        ctx.fillStyle = '#c9564f'; ctx.fillRect(-40,-56,80,16);
+        ctx.fillStyle = '#8a3a30'; ctx.fillRect(-40,-40,10,50); ctx.fillRect(30,-40,10,50);
+        ctx.fillStyle = '#5a3a20'; ctx.fillRect(-36,-14,72,24);
+        ctx.font='22px serif'; ctx.textAlign='center'; ctx.fillText('🥟',0,2);
+        break;
+    }
+    ctx.restore();
+  }
+
+  function drawGirl(cx, footY, frame){
+    ctx.save();
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.ellipse(cx, footY+3, 13, 4, 0,0,Math.PI*2); ctx.fill();
+
+    const legLift = frame===1 ? 6 : 0;
+    // legs
+    ctx.fillStyle = '#332055';
+    ctx.fillRect(cx-7, footY-14+ (frame===0?0:0), 6, 14-legLift);
+    ctx.fillRect(cx+1, footY-14+ (frame===1?0:0), 6, 14-(frame===1?0:legLift));
+
+    // dress
+    ctx.fillStyle = '#ff6fa0';
+    ctx.fillRect(cx-11, footY-34, 22, 22);
+    ctx.fillStyle = '#ff9dbf';
+    ctx.fillRect(cx-11, footY-34, 22, 6);
+
+    // arms
+    ctx.fillStyle = '#f3c8a0';
+    ctx.fillRect(cx-14, footY-30, 5, 12);
+    ctx.fillRect(cx+9, footY-30, 5, 12);
+
+    // head
+    ctx.fillStyle = '#f3c8a0';
+    ctx.fillRect(cx-9, footY-50, 18, 17);
+
+    // hair back
+    ctx.fillStyle = '#3a2418';
+    ctx.fillRect(cx-10, footY-52, 20, 9);
+    ctx.fillRect(cx-11, footY-45, 5, 17);
+    ctx.fillRect(cx+6, footY-45, 5, 17);
+    // ponytail
+    ctx.fillRect(cx+11, footY-46, 6, 16);
+
+    // eyes
+    ctx.fillStyle = '#2b2140';
+    ctx.fillRect(cx-5, footY-42, 2, 3);
+    ctx.fillRect(cx+3, footY-42, 2, 3);
+    // blush
+    ctx.fillStyle = 'rgba(255,111,160,0.5)';
+    ctx.fillRect(cx-7, footY-38, 3,2);
+    ctx.fillRect(cx+4, footY-38, 3,2);
+
+    ctx.restore();
+  }
+
+  /* ============================================================
+     PARTICLES
+  ============================================================ */
+  function spawnParticle(type){
+    if(type==='steam'){
+      state.particles.push({type, x:120+ (Math.random()*20-10), y:150, life:0, maxLife:60, vy:-0.6});
+    } else if(type==='rain'){
+      state.particles.push({type, x:Math.random()*W, y:-10, life:0, maxLife:200, vy:6+Math.random()*3});
+    }
+  }
+  function updateParticles(){
+    const lvl = LEVELS[state.levelIndex];
+    if(lvl.ambience==='steam' && Math.random()<0.15) spawnParticle('steam');
+    if(lvl.ambience==='rain' && Math.random()<0.6) spawnParticle('rain');
+
+    for(let i=state.particles.length-1;i>=0;i--){
+      const p = state.particles[i];
+      p.life++;
+      p.y += p.vy;
+      if(p.type==='steam') p.x += Math.sin(p.life*0.2)*0.4;
+      if(p.life > p.maxLife || p.y > H+20) state.particles.splice(i,1);
+    }
+  }
+  function drawParticles(){
+    for(const p of state.particles){
+      if(p.type==='steam'){
+        const alpha = 1 - p.life/p.maxLife;
+        ctx.fillStyle = `rgba(255,255,255,${alpha*0.5})`;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
+      } else if(p.type==='rain'){
+        ctx.strokeStyle = 'rgba(190,220,255,0.55)';
+        ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-2,p.y+10); ctx.stroke();
+      }
+    }
+  }
+
+  /* ============================================================
+     HOTSPOTS / HUD
+  ============================================================ */
+  function hotspotKey(levelId, hid){ return levelId+'::'+hid; }
+
+  function drawHotspots(level){
+    for(const hs of level.hotspots){
+      const done = state.completed[hotspotKey(level.id, hs.id)];
+      const dist = Math.hypot(state.player.x-hs.x, state.player.y-(hs.y+10));
+      const inRange = dist < 55;
+
+      ctx.save();
+      // glow
+      const glowR = 22 + Math.sin(state.frame*0.15)*3;
+      const grad = ctx.createRadialGradient(hs.x,hs.y,2,hs.x,hs.y,glowR);
+      grad.addColorStop(0, done ? 'rgba(123,216,143,0.35)' : (hs.secret? 'rgba(255,209,102,0.3)':'rgba(255,111,160,0.35)'));
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(hs.x, hs.y, glowR, 0, Math.PI*2); ctx.fill();
+
+      ctx.font = '24px serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(hs.icon, hs.x, hs.y);
+
+      if(done){
+        ctx.font='14px serif';
+        ctx.fillText('💚', hs.x+16, hs.y-16);
+      }
+      ctx.restore();
+
+      if(inRange && !done){
+        state.activeHotspotInRange = hs;
+      }
+    }
+  }
+
+  function refreshHud(){
+    const level = LEVELS[state.levelIndex];
+    $('levelNameLabel').textContent = level.name;
+    const main = level.hotspots.filter(h=>!h.secret);
+    const doneCount = main.filter(h=>state.completed[hotspotKey(level.id,h.id)]).length;
+    let html = '';
+    for(let i=0;i<main.length;i++){
+      html += `<span class="pixel-heart ${i<doneCount?'':'empty'}"></span>`;
+    }
+    $('heartsHud').innerHTML = html;
+
+    if(doneCount === main.length){
+      $('continueLevelBtn').classList.remove('hidden');
+      $('continueLevelBtn').textContent = (state.levelIndex === LEVELS.length-1) ? '✦ Finish ✦' : 'Continue ▸';
+    } else {
+      $('continueLevelBtn').classList.add('hidden');
+    }
+  }
+
+  /* ============================================================
+     DIALOGUE
+  ============================================================ */
+  const dialogueBox = $('dialogueBox');
+  const dialogueText = $('dialogueText');
+  const dialogueWho = $('dialogueWho');
+
+  function openDialogue(hotspot){
+    state.dialogueOpen = true;
+    state.dialogueQueueHotspot = hotspot;
+    state.dialogueLines = hotspot.lines.slice();
+    state.dialogueIdx = 0;
+    dialogueWho.textContent = hotspot.secret ? '✦ SECRET ✦' : hotspot.label.toUpperCase();
+    dialogueText.textContent = state.dialogueLines[0];
+    dialogueBox.classList.remove('hidden');
+    $('interactPrompt').classList.add('hidden');
+  }
+
+  function advanceDialogue(){
+    state.dialogueIdx++;
+    if(state.dialogueIdx >= state.dialogueLines.length){
+      closeDialogue();
+      return;
+    }
+    dialogueText.textContent = state.dialogueLines[state.dialogueIdx];
+  }
+
+  function closeDialogue(){
+    const level = LEVELS[state.levelIndex];
+    const hs = state.dialogueQueueHotspot;
+    if(hs) state.completed[hotspotKey(level.id, hs.id)] = true;
+    state.dialogueOpen = false;
+    state.dialogueQueueHotspot = null;
+    dialogueBox.classList.add('hidden');
+    refreshHud();
+  }
+
+  $('dialogueNext').addEventListener('click', advanceDialogue);
+
+  function tryInteract(){
+    if(state.dialogueOpen){ advanceDialogue(); return; }
+    if(state.activeHotspotInRange){
+      openDialogue(state.activeHotspotInRange);
+    }
+  }
+
+  /* ============================================================
+     INPUT
+  ============================================================ */
+  window.addEventListener('keydown', e=>{
+    state.keys[e.key.toLowerCase()] = true;
+    if(['e',' ','enter'].includes(e.key.toLowerCase())){
+      e.preventDefault();
+      tryInteract();
+    }
+  });
+  window.addEventListener('keyup', e=>{ state.keys[e.key.toLowerCase()] = false; });
+
+  document.querySelectorAll('.dpad').forEach(btn=>{
+    const dir = btn.dataset.dir;
+    const set = v => e => { e.preventDefault(); state.keys[dir]=v; };
+    btn.addEventListener('touchstart', set(true), {passive:false});
+    btn.addEventListener('touchend', set(false), {passive:false});
+    btn.addEventListener('mousedown', set(true));
+    btn.addEventListener('mouseup', set(false));
+    btn.addEventListener('mouseleave', set(false));
+  });
+  $('interactBtnMobile').addEventListener('click', tryInteract);
+
+  canvas.addEventListener('click', (e)=>{
+    if(state.dialogueOpen) return;
+    tryInteract();
+  });
+
+  /* ============================================================
+     LEVEL FLOW
+  ============================================================ */
+  function initLevel(idx){
+    state.levelIndex = idx;
+    state.player.x = W/2; state.player.y = H-60;
+    state.particles = [];
+    $('continueLevelBtn').classList.add('hidden');
+    refreshHud();
+  }
+
+  $('continueLevelBtn').addEventListener('click', ()=>{
+    if(state.levelIndex === LEVELS.length-1){
+      goToEnding();
+    } else {
+      initLevel(state.levelIndex+1);
+    }
+  });
+
+  function goToEnding(){
+    gameScreen.classList.add('hidden');
+    const endingScreen = $('endingScreen');
+    endingScreen.classList.remove('hidden');
+    let count = 0;
+    const heartsContainer = $('endingHearts');
+    const timer = setInterval(()=>{
+      spawnFloatHeart(heartsContainer);
+      count++;
+      if(count>40) clearInterval(timer);
+    }, 400);
+  }
+
+  $('replayBtn').addEventListener('click', ()=>{
+    $('endingScreen').classList.add('hidden');
+    state.completed = {};
+    titleScreen.classList.remove('hidden');
+    titleHeartLoop();
+  });
+
+  /* ============================================================
+     MAIN LOOP
+  ============================================================ */
+  function update(){
+    state.frame++;
+    if(!state.dialogueOpen){
+      const speed = 3;
+      let dx=0, dy=0;
+      if(state.keys['arrowup']||state.keys['w']||state.keys['up']) dy -= speed;
+      if(state.keys['arrowdown']||state.keys['s']||state.keys['down']) dy += speed;
+      if(state.keys['arrowleft']||state.keys['a']||state.keys['left']) dx -= speed;
+      if(state.keys['arrowright']||state.keys['d']||state.keys['right']) dx += speed;
+
+      state.player.moving = (dx!==0 || dy!==0);
+      state.player.x = Math.min(Math.max(state.player.x+dx, 30), W-30);
+      state.player.y = Math.min(Math.max(state.player.y+dy, 90), H-40);
+
+      if(state.player.moving){
+        state.frameTimer++;
+        if(state.frameTimer > 8){ state.frameTimer=0; state.player.dir = state.player.dir==='a'?'b':'a'; }
+      }
+    }
+    updateParticles();
+  }
+
+  function render(){
+    const level = LEVELS[state.levelIndex];
+    ctx.clearRect(0,0,W,H);
+    drawFloor(level.floorA, level.floorB);
+
+    // sort draw order by y for simple depth
+    const drawables = [
+      ...level.props.map(p=>({y:p.y, draw:()=>drawProp(p)})),
+      {y: state.player.y, draw: ()=>drawGirl(state.player.x, state.player.y, state.player.dir==='a'?0:1)}
+    ];
+    drawables.sort((a,b)=>a.y-b.y);
+    for(const d of drawables) d.draw();
+
+    state.activeHotspotInRange = null;
+    drawHotspots(level);
+    drawParticles();
+
+    // interact prompt
+    const promptEl = $('interactPrompt');
+    if(state.activeHotspotInRange && !state.dialogueOpen){
+      const hs = state.activeHotspotInRange;
+      promptEl.textContent = hs.secret ? '✦ TALK ✦' : '✦ TALK ✦ '+hs.label;
+      promptEl.style.left = (hs.x / W * 100) + '%';
+      promptEl.style.top = ((hs.y-24) / H * 100) + '%';
+      promptEl.classList.remove('hidden');
+    } else {
+      promptEl.classList.add('hidden');
+    }
+  }
+
+  function loop(){
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function startGame(){
+    initLevel(0);
+    requestAnimationFrame(loop);
+  }
+
+})();
+</script>
+</body>
+</html>
