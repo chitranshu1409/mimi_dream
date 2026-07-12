@@ -350,8 +350,7 @@
       props:[
         {type:'mud', x:180, y:180},
         {type:'shop', x:520, y:150},
-        {type:'bench', x:360, y:300},
-        {type:'secret', x:640, y:340}
+        {type:'bench', x:360, y:300}
       ],
       hotspots:[
         {id:'mud', x:180, y:180, icon:'🟤', label:"The 'Duck Pond'",
@@ -371,12 +370,6 @@
             "Us, Laughing Anyway",
             "Nothing went as planned. Not one single thing.",
             "But somehow, laughing at my failed plan together became the best part of the whole day."
-          ]},
-        {id:'secret', x:640, y:340, icon:'🎀', label:'???', secret:true,
-          lines:[
-            "you found a secret",
-            "\"Here is your 10 rupees to show pom pom.\" 😄",
-            "(an inside joke. don't ask. we know.)"
           ]}
       ]
     },
@@ -409,6 +402,53 @@
             "The Golgappe Stall",
             "After, we found a golgappe stall and ate way too many.",
             "Best post-rain-dance meal of my entire life."
+          ]}
+      ]
+    },
+    {
+      id:'level4',
+      name:'Memory IV — The Road Back Home',
+      floorA:'#4a8a4a', floorB:'#3f7a40',
+      ambience:'none',
+      startPos:{x:340, y:95},
+      customBg: (ctx)=>{
+        // vertical road strip down the middle
+        ctx.fillStyle = '#555a5e';
+        ctx.fillRect(260, 0, 160, H);
+        ctx.fillStyle = '#4a4e52';
+        ctx.fillRect(260, 0, 10, H);
+        ctx.fillRect(410, 0, 10, H);
+        // dashed center line
+        ctx.fillStyle = '#f2d24a';
+        for(let y=0; y<H; y+=34){
+          ctx.fillRect(335, y, 10, 20);
+        }
+      },
+      props:[
+        {type:'biryaniShop', x:130, y:110},
+        {type:'momoShop', x:590, y:230},
+        {type:'erickshaw', x:340, y:380}
+      ],
+      hotspots:[
+        {id:'biryani', x:130, y:110, icon:'🍛', label:'Biryani Shop',
+          lines:[
+            "The Biryani Shop",
+            "Tucked up on the corner, this little biryani shop became one of our regular stops.",
+            "You always give me your extra piece of chicken without me even asking.",
+            "Small thing. Means everything."
+          ]},
+        {id:'momo', x:590, y:230, icon:'🥟', label:'Momo Shop',
+          lines:[
+            "The Momo Shop",
+            "Steamed momos and white sauce pasta, every single time. We never even debate it anymore.",
+            "It's just what we get. It's just us."
+          ]},
+        {id:'erickshaw', x:340, y:380, icon:'🛺', label:'E-Rickshaw Stand',
+          lines:[
+            "The E-Rickshaw Stand",
+            "\"Give me 10 rupees na, chalna hai.\"",
+            "\"Here is your 10 rupees... send me pom pom.\" 😄",
+            "Our secret joke, every single time we end up here."
           ]}
       ]
     }
@@ -469,6 +509,22 @@
         ctx.fillStyle = '#4a2f1a'; ctx.fillRect(-20,18,6,14); ctx.fillRect(14,18,6,14);
         ctx.fillStyle = '#eee'; ctx.beginPath(); ctx.ellipse(0,4,20,8,0,0,Math.PI*2); ctx.fill();
         ctx.font='24px serif'; ctx.textAlign='center'; ctx.fillText('🥬',0,-4);
+        break;
+      case 'biryaniShop':
+        ctx.fillStyle = '#8a4a2a'; ctx.fillRect(-50,-56,100,76);
+        ctx.fillStyle = '#c9564f'; ctx.fillRect(-56,-70,112,16);
+        ctx.fillStyle = '#3a2010'; ctx.fillRect(-16,-4,32,24);
+        ctx.font='26px serif'; ctx.textAlign='center'; ctx.fillText('🍛',0,-26);
+        break;
+      case 'momoShop':
+        ctx.fillStyle = '#5a6a8a'; ctx.fillRect(-50,-56,100,76);
+        ctx.fillStyle = '#f2d24a'; ctx.fillRect(-56,-70,112,16);
+        ctx.fillStyle = '#3a2010'; ctx.fillRect(-16,-4,32,24);
+        ctx.font='26px serif'; ctx.textAlign='center'; ctx.fillText('🥟',-12,-26);
+        ctx.font='22px serif'; ctx.fillText('🍝',14,-24);
+        break;
+      case 'erickshaw':
+        ctx.font='34px serif'; ctx.textAlign='center'; ctx.fillText('🛺',0,0);
         break;
       case 'mud':
         ctx.fillStyle = '#6b4a2a';
@@ -726,7 +782,12 @@
   ============================================================ */
   function initLevel(idx){
     state.levelIndex = idx;
-    state.player.x = W/2; state.player.y = H-60;
+    const lvl = LEVELS[idx];
+    if(lvl.startPos){
+      state.player.x = lvl.startPos.x; state.player.y = lvl.startPos.y;
+    } else {
+      state.player.x = W/2; state.player.y = H-60;
+    }
     state.particles = [];
     $('continueLevelBtn').classList.add('hidden');
     refreshHud();
@@ -789,6 +850,7 @@
     const level = LEVELS[state.levelIndex];
     ctx.clearRect(0,0,W,H);
     drawFloor(level.floorA, level.floorB);
+    if(typeof level.customBg === 'function') level.customBg(ctx);
 
     // sort draw order by y for simple depth
     const drawables = [
