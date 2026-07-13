@@ -172,6 +172,26 @@
     position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
   }
 
+  #mediaOverlay{
+    position:absolute; inset:0;
+    background:rgba(10,6,20,0.92);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; padding:20px; z-index:30;
+  }
+  #mediaContent{
+    max-width:92%; max-height:70%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #mediaVideo, #mediaImage{
+    max-width:100%; max-height:100%;
+    border:3px solid var(--cream);
+    box-shadow:6px 6px 0 var(--shadow);
+    object-fit:contain;
+    background:#000;
+  }
+  #mediaControls{ display:flex; gap:10px; }
+  #mediaControls button{ font-size:clamp(9px,2.2vw,11px); }
+
   #mobileControls{
     position:absolute; bottom:14px; left:12px; right:12px;
     display:flex; justify-content:space-between; align-items:flex-end; pointer-events:none;
@@ -241,6 +261,16 @@
         <div class="footer"><button id="dialogueNext" class="pixel-font">Continue ▸</button></div>
       </div>
       <button id="continueLevelBtn" class="pixel-font hidden">Continue ▸</button>
+      <div id="mediaOverlay" class="hidden">
+        <div id="mediaContent">
+          <video id="mediaVideo" class="hidden" playsinline muted loop></video>
+          <img id="mediaImage" class="hidden" alt="a memory">
+        </div>
+        <div id="mediaControls">
+          <button id="unmuteBtn" class="pixel-font hidden">🔇 Unmute</button>
+          <button id="mediaCloseBtn" class="pixel-font">✕ Close</button>
+        </div>
+      </div>
       <div id="mobileControls">
         <div class="pad" style="grid-template-areas:'. u .' 'l . r' '. d .';">
           <div></div><button class="dpad" data-dir="up" style="grid-area:u;">▲</button><div></div>
@@ -334,35 +364,80 @@
   const LEVELS = [
     {
       id:'level1',
-      name:'Memory I — The Ramen Cafe',
-      floorA:'#8a5a35', floorB:'#7a4d2c',
-      ambience:'steam',
-      props:[
-        {type:'counter', x:120, y:150},
-        {type:'table', x:420, y:260},
-        {type:'kimchi', x:600, y:120}
-      ],
-      hotspots:[
-        {id:'counter', x:120, y:150, icon:'🍜', label:'Order Counter',
-          lines:[
-            "The Order Counter",
-            "We don't even look at the menu anymore. Same ramen, every single time.",
-            "But on our first date, we ordered shaved ice cream instead. Our little inside joke.",
-            "₹400, just for ice. Worth every rupee."
-          ]},
-        {id:'table', x:420, y:260, icon:'🍥', label:'Our Table',
-          lines:[
-            "Our Table",
-            "We sat right here. Four hours of ramen, laughing, and me falling for you a little more with every bowl.",
-            "I don't think either of us noticed the time passing."
-          ]},
-        {id:'kimchi', x:600, y:120, icon:'🥬', label:"Mimi's Kimchi",
-          lines:[
-            "Mimi's Kimchi",
-            "You always give me your kimchi. Every single time, without me even asking.",
-            "It's such a small thing. It might be my favorite thing you do."
-          ]}
-      ]
+      name:'Memory I — Near Moolchand Metro',
+      startRoom:'outer',
+      rooms:{
+        outer:{
+          name:'Memory I — Near Moolchand Metro',
+          floorA:'#5c8a4a', floorB:'#517c40',
+          ambience:'none',
+          startPos:{x:600, y:150},
+          customBg:(ctx)=>{
+            // horizontal road across the middle
+            ctx.fillStyle = '#555a5e';
+            ctx.fillRect(0, 190, W, 110);
+            ctx.fillStyle = '#4a4e52';
+            ctx.fillRect(0, 190, W, 8);
+            ctx.fillRect(0, 292, W, 8);
+            ctx.fillStyle = '#f2d24a';
+            for(let x=0; x<W; x+=36){
+              ctx.fillRect(x, 240, 20, 8);
+            }
+          },
+          props:[
+            {type:'metroBoard', x:625, y:80},
+            {type:'swingSet', x:85, y:110},
+            {type:'ramenBuilding', x:610, y:330}
+          ],
+          hotspots:[
+            {id:'swing', x:85, y:130, icon:'🛝', label:'The Park Swings',
+              media:{ type:'video', src:'media/swing-video.mp4' },
+              lines:[
+                "The Park Swings",
+                "Right here, on our first date, we sat on these swings and just... talked.",
+                "Nothing special was happening, and somehow it was still one of my favorite hours."
+              ]},
+            {id:'ramenDoor', x:600, y:300, icon:'🚪', label:'Enter Ramen Shop',
+              door:{ toRoom:'interior', spawn:{x:350, y:380} }}
+          ]
+        },
+        interior:{
+          name:'Memory I — Inside the Ramen Shop',
+          floorA:'#8a5a35', floorB:'#7a4d2c',
+          ambience:'steam',
+          startPos:{x:350, y:380},
+          props:[
+            {type:'counter', x:120, y:150},
+            {type:'table', x:420, y:260},
+            {type:'kimchi', x:600, y:120},
+            {type:'shopDoor', x:350, y:400}
+          ],
+          hotspots:[
+            {id:'counter', x:120, y:150, icon:'🍜', label:'Order Counter',
+              lines:[
+                "The Order Counter",
+                "We don't even look at the menu anymore. Same ramen, every single time.",
+                "But on our first date, we ordered shaved ice cream instead. Our little inside joke.",
+                "₹400, just for ice. Worth every rupee."
+              ]},
+            {id:'table', x:420, y:260, icon:'🍥', label:'Our Table',
+              lines:[
+                "Our Table",
+                "We sat right here. Four hours of ramen, laughing, and me falling for you a little more with every bowl.",
+                "I don't think either of us noticed the time passing."
+              ]},
+            {id:'kimchi', x:600, y:120, icon:'🥬', label:"Mimi's Kimchi",
+              media:{ type:'images', src:['media/kimchi-1.jpg','media/kimchi-2.jpg'] },
+              lines:[
+                "Mimi's Kimchi",
+                "You always give me your kimchi. Every single time, without me even asking.",
+                "It's such a small thing. It might be my favorite thing you do."
+              ]},
+            {id:'exitDoor', x:350, y:400, icon:'🚪', label:'Exit to Street',
+              door:{ toRoom:'outer', spawn:{x:600, y:340} }}
+          ]
+        }
+      }
     },
     {
       id:'level2',
@@ -489,7 +564,11 @@
     dialogueQueueHotspot: null,
     dialogueLines: [],
     dialogueIdx: 0,
-    activeHotspotInRange: null
+    activeHotspotInRange: null,
+    mediaOpen: false,
+    mediaHotspot: null,
+    slideshowTimer: null,
+    slideshowIndex: 0
   };
 
   /* ============================================================
@@ -532,6 +611,35 @@
         ctx.fillStyle = '#4a2f1a'; ctx.fillRect(-20,18,6,14); ctx.fillRect(14,18,6,14);
         ctx.fillStyle = '#eee'; ctx.beginPath(); ctx.ellipse(0,4,20,8,0,0,Math.PI*2); ctx.fill();
         ctx.font='24px serif'; ctx.textAlign='center'; ctx.fillText('🥬',0,-4);
+        break;
+      case 'metroBoard':
+        ctx.fillStyle = '#4a2f1a'; ctx.fillRect(-4,-10,8,60);
+        ctx.fillStyle = '#2c5f8a'; ctx.fillRect(-85,-46,170,36);
+        ctx.fillStyle = '#1c4566'; ctx.fillRect(-85,-46,170,8);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('MOOLCHAND', 0, -32);
+        ctx.fillText('METRO STATION', 0, -18);
+        ctx.font='20px serif'; ctx.fillText('🚇', 0, 4);
+        break;
+      case 'swingSet':
+        ctx.strokeStyle = '#4a2f1a'; ctx.lineWidth=6;
+        ctx.beginPath(); ctx.moveTo(-40,-50); ctx.lineTo(-40,20); ctx.moveTo(40,-50); ctx.lineTo(40,20); ctx.moveTo(-40,-50); ctx.lineTo(40,-50); ctx.stroke();
+        ctx.lineWidth=2; ctx.strokeStyle='#8a6a3a';
+        ctx.beginPath(); ctx.moveTo(-10,-46); ctx.lineTo(-14,4); ctx.moveTo(10,-46); ctx.lineTo(14,4); ctx.stroke();
+        ctx.fillStyle = '#ff6fa0'; ctx.fillRect(-18,4,36,8);
+        break;
+      case 'ramenBuilding':
+        ctx.fillStyle = '#8a4a2a'; ctx.fillRect(-55,-70,110,90);
+        ctx.fillStyle = '#c9564f'; ctx.fillRect(-61,-84,122,16);
+        ctx.font='24px serif'; ctx.textAlign='center'; ctx.fillText('🍜',0,-40);
+        ctx.fillStyle = '#3a2010'; ctx.fillRect(-16,-4,32,24);
+        ctx.fillStyle = '#f2d24a'; ctx.fillRect(-14,-2,28,10);
+        break;
+      case 'shopDoor':
+        ctx.fillStyle = '#3a2010'; ctx.fillRect(-18,-30,36,44);
+        ctx.fillStyle = '#5a3a20'; ctx.fillRect(-14,-26,28,36);
+        ctx.font='20px serif'; ctx.textAlign='center'; ctx.fillText('🚪',0,-2);
         break;
       case 'biryaniShop':
         ctx.fillStyle = '#8a4a2a'; ctx.fillRect(-50,-56,100,76);
@@ -645,6 +753,10 @@
   /* ============================================================
      PARTICLES
   ============================================================ */
+  function getRoomData(){
+    const level = LEVELS[state.levelIndex];
+    return level.rooms ? level.rooms[state.room] : level;
+  }
   function spawnParticle(type){
     if(type==='steam'){
       state.particles.push({type, x:120+ (Math.random()*20-10), y:150, life:0, maxLife:60, vy:-0.6});
@@ -653,9 +765,9 @@
     }
   }
   function updateParticles(){
-    const lvl = LEVELS[state.levelIndex];
-    if(lvl.ambience==='steam' && Math.random()<0.15) spawnParticle('steam');
-    if(lvl.ambience==='rain' && Math.random()<0.6) spawnParticle('rain');
+    const room = getRoomData();
+    if(room.ambience==='steam' && Math.random()<0.15) spawnParticle('steam');
+    if(room.ambience==='rain' && Math.random()<0.6) spawnParticle('rain');
 
     for(let i=state.particles.length-1;i>=0;i--){
       const p = state.particles[i];
@@ -684,9 +796,9 @@
   ============================================================ */
   function hotspotKey(levelId, hid){ return levelId+'::'+hid; }
 
-  function drawHotspots(level){
-    for(const hs of level.hotspots){
-      const done = state.completed[hotspotKey(level.id, hs.id)];
+  function drawHotspots(level, room){
+    for(const hs of room.hotspots){
+      const done = !hs.door && state.completed[hotspotKey(level.id, hs.id)];
       const dist = Math.hypot(state.player.x-hs.x, state.player.y-(hs.y+10));
       const inRange = dist < 55;
 
@@ -694,7 +806,7 @@
       // glow
       const glowR = 22 + Math.sin(state.frame*0.15)*3;
       const grad = ctx.createRadialGradient(hs.x,hs.y,2,hs.x,hs.y,glowR);
-      grad.addColorStop(0, done ? 'rgba(123,216,143,0.35)' : (hs.secret? 'rgba(255,209,102,0.3)':'rgba(255,111,160,0.35)'));
+      grad.addColorStop(0, hs.door ? 'rgba(255,255,255,0.28)' : (done ? 'rgba(123,216,143,0.35)' : (hs.secret? 'rgba(255,209,102,0.3)':'rgba(255,111,160,0.35)')));
       grad.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = grad;
       ctx.beginPath(); ctx.arc(hs.x, hs.y, glowR, 0, Math.PI*2); ctx.fill();
@@ -717,8 +829,10 @@
 
   function refreshHud(){
     const level = LEVELS[state.levelIndex];
-    $('levelNameLabel').textContent = level.name;
-    const main = level.hotspots.filter(h=>!h.secret);
+    const room = getRoomData();
+    $('levelNameLabel').textContent = room.name || level.name;
+    const main = (level.rooms ? Object.values(level.rooms).flatMap(r=>r.hotspots) : level.hotspots)
+      .filter(h=>!h.secret && !h.door);
     const doneCount = main.filter(h=>state.completed[hotspotKey(level.id,h.id)]).length;
     let html = '';
     for(let i=0;i<main.length;i++){
@@ -726,7 +840,8 @@
     }
     $('heartsHud').innerHTML = html;
 
-    if(doneCount === main.length){
+    const inFinishableRoom = !level.rooms || state.room === level.startRoom;
+    if(doneCount === main.length && inFinishableRoom){
       $('continueLevelBtn').classList.remove('hidden');
       $('continueLevelBtn').textContent = (state.levelIndex === LEVELS.length-1) ? '✦ Finish ✦' : 'Continue ▸';
     } else {
@@ -763,22 +878,101 @@
   }
 
   function closeDialogue(){
-    const level = LEVELS[state.levelIndex];
     const hs = state.dialogueQueueHotspot;
-    if(hs) state.completed[hotspotKey(level.id, hs.id)] = true;
     state.dialogueOpen = false;
     state.dialogueQueueHotspot = null;
     dialogueBox.classList.add('hidden');
+    if(hs && hs.media){
+      openMedia(hs);
+    } else {
+      const level = LEVELS[state.levelIndex];
+      if(hs) state.completed[hotspotKey(level.id, hs.id)] = true;
+      $('mobileControls').classList.remove('dialogue-active');
+      refreshHud();
+    }
+  }
+
+  const mediaOverlay = $('mediaOverlay');
+  const mediaVideo = $('mediaVideo');
+  const mediaImage = $('mediaImage');
+  const unmuteBtn = $('unmuteBtn');
+
+  function openMedia(hs){
+    state.mediaOpen = true;
+    state.mediaHotspot = hs;
+    mediaOverlay.classList.remove('hidden');
+    $('mobileControls').classList.add('dialogue-active');
+    const m = hs.media;
+    if(m.type==='video'){
+      mediaImage.classList.add('hidden');
+      mediaVideo.classList.remove('hidden');
+      mediaVideo.src = m.src;
+      mediaVideo.muted = true;
+      mediaVideo.currentTime = 0;
+      mediaVideo.play().catch(()=>{});
+      unmuteBtn.classList.remove('hidden');
+      unmuteBtn.textContent = '🔇 Unmute';
+    } else if(m.type==='images'){
+      mediaVideo.pause();
+      mediaVideo.classList.add('hidden');
+      mediaImage.classList.remove('hidden');
+      unmuteBtn.classList.add('hidden');
+      state.slideshowIndex = 0;
+      mediaImage.src = m.src[0];
+      clearInterval(state.slideshowTimer);
+      if(m.src.length > 1){
+        state.slideshowTimer = setInterval(()=>{
+          state.slideshowIndex = (state.slideshowIndex+1) % m.src.length;
+          mediaImage.src = m.src[state.slideshowIndex];
+        }, 2600);
+      }
+    }
+  }
+
+  function closeMedia(){
+    state.mediaOpen = false;
+    mediaOverlay.classList.add('hidden');
     $('mobileControls').classList.remove('dialogue-active');
+    mediaVideo.pause();
+    clearInterval(state.slideshowTimer);
+    const hs = state.mediaHotspot;
+    if(hs){
+      const level = LEVELS[state.levelIndex];
+      state.completed[hotspotKey(level.id, hs.id)] = true;
+    }
+    state.mediaHotspot = null;
     refreshHud();
   }
 
+  unmuteBtn.addEventListener('click', ()=>{
+    mediaVideo.muted = !mediaVideo.muted;
+    unmuteBtn.textContent = mediaVideo.muted ? '🔇 Unmute' : '🔊 Mute';
+  });
+  $('mediaCloseBtn').addEventListener('click', closeMedia);
+
   $('dialogueNext').addEventListener('click', advanceDialogue);
 
+  function switchRoom(doorInfo){
+    state.room = doorInfo.toRoom;
+    state.player.x = doorInfo.spawn.x;
+    state.player.y = doorInfo.spawn.y;
+    state.particles = [];
+    state.activeHotspotInRange = null;
+    $('interactPrompt').classList.add('hidden');
+    if(state.mediaOpen) closeMedia();
+    refreshHud();
+  }
+
   function tryInteract(){
+    if(state.mediaOpen) return;
     if(state.dialogueOpen){ advanceDialogue(); return; }
     if(state.activeHotspotInRange){
-      openDialogue(state.activeHotspotInRange);
+      const hs = state.activeHotspotInRange;
+      if(hs.door){
+        switchRoom(hs.door);
+      } else {
+        openDialogue(hs);
+      }
     }
   }
 
@@ -806,7 +1000,7 @@
   $('interactBtnMobile').addEventListener('click', tryInteract);
 
   canvas.addEventListener('click', (e)=>{
-    if(state.dialogueOpen) return;
+    if(state.dialogueOpen || state.mediaOpen) return;
     tryInteract();
   });
 
@@ -816,12 +1010,15 @@
   function initLevel(idx){
     state.levelIndex = idx;
     const lvl = LEVELS[idx];
-    if(lvl.startPos){
-      state.player.x = lvl.startPos.x; state.player.y = lvl.startPos.y;
+    state.room = lvl.rooms ? (lvl.startRoom || Object.keys(lvl.rooms)[0]) : null;
+    const room = getRoomData();
+    if(room.startPos){
+      state.player.x = room.startPos.x; state.player.y = room.startPos.y;
     } else {
       state.player.x = W/2; state.player.y = H-60;
     }
     state.particles = [];
+    if(state.mediaOpen) closeMedia();
     $('continueLevelBtn').classList.add('hidden');
     refreshHud();
   }
@@ -859,7 +1056,7 @@
   ============================================================ */
   function update(){
     state.frame++;
-    if(!state.dialogueOpen){
+    if(!state.dialogueOpen && !state.mediaOpen){
       const speed = 3;
       let dx=0, dy=0;
       if(state.keys['arrowup']||state.keys['w']||state.keys['up']) dy -= speed;
@@ -881,27 +1078,28 @@
 
   function render(){
     const level = LEVELS[state.levelIndex];
+    const room = getRoomData();
     ctx.clearRect(0,0,W,H);
-    drawFloor(level.floorA, level.floorB);
-    if(typeof level.customBg === 'function') level.customBg(ctx);
+    drawFloor(room.floorA, room.floorB);
+    if(typeof room.customBg === 'function') room.customBg(ctx);
 
     // sort draw order by y for simple depth
     const drawables = [
-      ...level.props.map(p=>({y:p.y, draw:()=>drawProp(p)})),
+      ...room.props.map(p=>({y:p.y, draw:()=>drawProp(p)})),
       {y: state.player.y, draw: ()=>drawGirl(state.player.x, state.player.y, state.player.dir==='a'?0:1)}
     ];
     drawables.sort((a,b)=>a.y-b.y);
     for(const d of drawables) d.draw();
 
     state.activeHotspotInRange = null;
-    drawHotspots(level);
+    drawHotspots(level, room);
     drawParticles();
 
     // interact prompt
     const promptEl = $('interactPrompt');
     if(state.activeHotspotInRange && !state.dialogueOpen){
       const hs = state.activeHotspotInRange;
-      promptEl.textContent = hs.secret ? '✦ TALK ✦' : '✦ TALK ✦ '+hs.label;
+      promptEl.textContent = hs.door ? '✦ '+hs.label+' ✦' : (hs.secret ? '✦ TALK ✦' : '✦ TALK ✦ '+hs.label);
       promptEl.style.left = (hs.x / W * 100) + '%';
       promptEl.style.top = ((hs.y-24) / H * 100) + '%';
       promptEl.classList.remove('hidden');
